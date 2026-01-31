@@ -123,7 +123,7 @@ func (c *Controller) handleAddOrUpdateVMIMigration(key string) error {
 
 	// use VirtualMachineInstance's MigrationState because VirtualMachineInstanceMigration's MigrationState is not updated until migration finished
 	var srcNodeName, targetNodeName string
-	if vmi.Status.MigrationState != nil {
+	if vmi.Status.MigrationState != nil && vmi.Status.MigrationState.MigrationUID == vmiMigration.UID {
 		klog.Infof("current vmiMigration %s status %s, target Node %s, source Node %s, target Pod %s, source Pod %s", key,
 			vmiMigration.Status.Phase,
 			vmi.Status.MigrationState.TargetNode,
@@ -133,7 +133,11 @@ func (c *Controller) handleAddOrUpdateVMIMigration(key string) error {
 		srcNodeName = vmi.Status.MigrationState.SourceNode
 		targetNodeName = vmi.Status.MigrationState.TargetNode
 	} else {
-		klog.Infof("current vmiMigration %s status %s, vmi MigrationState is nil", key, vmiMigration.Status.Phase)
+		if vmi.Status.MigrationState != nil {
+			klog.Infof("current vmiMigration %s status %s, vmi MigrationState is stale", key, vmiMigration.Status.Phase)
+		} else {
+			klog.Infof("current vmiMigration %s status %s, vmi MigrationState is nil", key, vmiMigration.Status.Phase)
+		}
 	}
 
 	portName := ovs.PodNameToPortName(vmiMigration.Spec.VMIName, vmiMigration.Namespace, util.OvnProvider)
